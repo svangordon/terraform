@@ -557,10 +557,32 @@ Value:
 		diags = diags.Append(exprDiags)
 		keySrc, exprDiags := upgradeExpr(tv.Key, filename, true, an)
 		diags = diags.Append(exprDiags)
-		buf.Write(targetSrc)
-		buf.WriteString("[")
-		buf.Write(keySrc)
-		buf.WriteString("]")
+
+		parts := strings.Split(string(targetSrc), ".")
+		parts = upgradeTraversalParts(parts, an) // might add/remove/change parts
+		first, remain := parts[0], parts[1:]
+
+		hasSplat := false
+
+		buf.WriteString(first)
+		for _, part := range remain {
+			// Attempt to convert old-style splat indexing to new one
+			// e.g. res.label.*.attr[idx] to res.label[idx].attr
+			if part == "*" {
+				hasSplat = true
+				buf.WriteString(fmt.Sprintf("[%s]", keySrc))
+				continue
+			}
+
+			buf.WriteByte('.')
+			buf.WriteString(part)
+		}
+
+		if !hasSplat {
+			buf.WriteString("[")
+			buf.Write(keySrc)
+			buf.WriteString("]")
+		}
 
 	case *hilast.Output:
 		if len(tv.Exprs) == 1 {
