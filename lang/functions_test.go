@@ -43,6 +43,60 @@ func TestFunctions(t *testing.T) {
 		},
 
 		{
+			`ceil(1.2)`,
+			cty.NumberIntVal(2),
+		},
+
+		{
+			`chunklist(["a", "b", "c"], 1)`,
+			cty.ListVal([]cty.Value{
+				cty.ListVal([]cty.Value{
+					cty.StringVal("a"),
+				}),
+				cty.ListVal([]cty.Value{
+					cty.StringVal("b"),
+				}),
+				cty.ListVal([]cty.Value{
+					cty.StringVal("c"),
+				}),
+			}),
+		},
+
+		{
+			`cidrhost("192.168.1.0/24", 5)`,
+			cty.StringVal("192.168.1.5"),
+		},
+
+		{
+			`cidrnetmask("192.168.1.0/24")`,
+			cty.StringVal("255.255.255.0"),
+		},
+
+		{
+			`cidrsubnet("192.168.2.0/20", 4, 6)`,
+			cty.StringVal("192.168.6.0/24"),
+		},
+
+		{
+			`coalesce("first", "second", "third")`,
+			cty.StringVal("first"),
+		},
+
+		{
+			`coalescelist(["first", "second"], ["third", "fourth"])`,
+			cty.ListVal([]cty.Value{
+				cty.StringVal("first"), cty.StringVal("second"),
+			}),
+		},
+
+		{
+			`compact(["test", "", "test"])`,
+			cty.ListVal([]cty.Value{
+				cty.StringVal("test"), cty.StringVal("test"),
+			}),
+		},
+
+		{
 			`contains(["a", "b"], "a")`,
 			cty.True,
 		},
@@ -52,8 +106,131 @@ func TestFunctions(t *testing.T) {
 		},
 
 		{
+			`distinct(["a", "b", "a", "b"])`,
+			cty.ListVal([]cty.Value{
+				cty.StringVal("a"), cty.StringVal("b"),
+			}),
+		},
+
+		{
+			`element(["hello"], 0)`,
+			cty.StringVal("hello"),
+		},
+
+		{
 			`file("hello.txt")`,
 			cty.StringVal("hello!"),
+		},
+
+		{
+			`flatten([tolist(["a", "b"]), tolist(["c", "d"])])`,
+			cty.ListVal([]cty.Value{
+				cty.StringVal("a"),
+				cty.StringVal("b"),
+				cty.StringVal("c"),
+				cty.StringVal("d"),
+			}),
+		},
+
+		{
+			`index(["a", "b", "c"], "a")`,
+			cty.NumberIntVal(0),
+		},
+
+		{
+			`keys({"hello"=1, "goodbye"=42})`,
+			cty.TupleVal([]cty.Value{
+				cty.StringVal("goodbye"),
+				cty.StringVal("hello"),
+			}),
+		},
+
+		{
+			`length(["the", "quick", "brown", "bear"])`,
+			cty.NumberIntVal(4),
+		},
+
+		{
+			`list("hello")`,
+			cty.ListVal([]cty.Value{
+				cty.StringVal("hello"),
+			}),
+		},
+
+		{
+			`lookup({hello=1, goodbye=42}, "goodbye")`,
+			cty.NumberIntVal(42),
+		},
+
+		{
+			`map("hello", "world")`,
+			cty.MapVal(map[string]cty.Value{
+				"hello": cty.StringVal("world"),
+			}),
+		},
+
+		{
+			`matchkeys(["a", "b", "c"], ["ref1", "ref2", "ref3"], ["ref1"])`,
+			cty.ListVal([]cty.Value{
+				cty.StringVal("a"),
+			}),
+		},
+
+		{
+			`merge({"a"="b"}, {"c"="d"})`,
+			cty.ObjectVal(map[string]cty.Value{
+				"a": cty.StringVal("b"),
+				"c": cty.StringVal("d"),
+			}),
+		},
+
+		{
+			`reverse(["a", true, 0])`,
+			cty.TupleVal([]cty.Value{cty.Zero, cty.True, cty.StringVal("a")}),
+		},
+
+		{
+			`setproduct(["development", "staging", "production"], ["app1", "app2"])`,
+			cty.ListVal([]cty.Value{
+				cty.TupleVal([]cty.Value{cty.StringVal("development"), cty.StringVal("app1")}),
+				cty.TupleVal([]cty.Value{cty.StringVal("development"), cty.StringVal("app2")}),
+				cty.TupleVal([]cty.Value{cty.StringVal("staging"), cty.StringVal("app1")}),
+				cty.TupleVal([]cty.Value{cty.StringVal("staging"), cty.StringVal("app2")}),
+				cty.TupleVal([]cty.Value{cty.StringVal("production"), cty.StringVal("app1")}),
+				cty.TupleVal([]cty.Value{cty.StringVal("production"), cty.StringVal("app2")}),
+			}),
+		},
+
+		{
+			`slice(["a", "b", "c", "d"], 1, 3)`,
+			cty.ListVal([]cty.Value{
+				cty.StringVal("b"), cty.StringVal("c"),
+			}),
+		},
+
+		{
+			`transpose({"a" = ["1", "2"], "b" = ["2", "3"]})`,
+			cty.MapVal(map[string]cty.Value{
+				"1": cty.ListVal([]cty.Value{cty.StringVal("a")}),
+				"2": cty.ListVal([]cty.Value{cty.StringVal("a"), cty.StringVal("b")}),
+				"3": cty.ListVal([]cty.Value{cty.StringVal("b")}),
+			}),
+		},
+
+		{
+			`values({"hello"="world", "what's"="up"})`,
+			cty.TupleVal([]cty.Value{
+				cty.StringVal("world"),
+				cty.StringVal("up"),
+			}),
+		},
+
+		{
+			`zipmap(["hello", "bar"], ["world", "baz"])`,
+			cty.ObjectVal(map[string]cty.Value{
+				"hello": cty.StringVal("world"),
+				"bar":   cty.StringVal("baz"),
+			}),
 		},
 	}
 
