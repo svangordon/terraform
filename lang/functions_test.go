@@ -1,6 +1,7 @@
 package lang
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/hashicorp/hcl2/hcl"
@@ -30,237 +31,480 @@ import (
 // functions showing real-world use-cases that rely on type conversion
 // behaviors.
 func TestFunctions(t *testing.T) {
-	tests := []struct {
+	tests := map[string][]struct {
 		src  string
 		want cty.Value
 	}{
 		// Please maintain this list in alphabetical order by function, with
 		// a blank line between the group of tests for each function.
 
-		{
-			`abs(-1)`,
-			cty.NumberIntVal(1),
+		"abs": {
+			{
+				`abs(-1)`,
+				cty.NumberIntVal(1),
+			},
 		},
 
-		{
-			`ceil(1.2)`,
-			cty.NumberIntVal(2),
+		"base64sha256": {
+			{
+				`base64sha256("test")`,
+				cty.StringVal("n4bQgYhMfWWaL+qgxVrQFaO/TxsrC4Is0V1sFbDwCgg="),
+			},
 		},
 
-		{
-			`chunklist(["a", "b", "c"], 1)`,
-			cty.ListVal([]cty.Value{
+		"base64sha512": {
+			{
+				`base64sha512("test")`,
+				cty.StringVal("7iaw3Ur350mqGo7jwQrpkj9hiYB3Lkc/iBml1JQODbJ6wYX4oOHV+E+IvIh/1nsUNzLDBMxfqa2Ob1f1ACio/w=="),
+			},
+		},
+
+		"ceil": {
+			{
+				`ceil(1.2)`,
+				cty.NumberIntVal(2),
+			},
+		},
+
+		"chunklist": {
+			{
+				`chunklist(["a", "b", "c"], 1)`,
+				cty.ListVal([]cty.Value{
+					cty.ListVal([]cty.Value{
+						cty.StringVal("a"),
+					}),
+					cty.ListVal([]cty.Value{
+						cty.StringVal("b"),
+					}),
+					cty.ListVal([]cty.Value{
+						cty.StringVal("c"),
+					}),
+				}),
+			},
+		},
+
+		"cidrhost": {
+			{
+				`cidrhost("192.168.1.0/24", 5)`,
+				cty.StringVal("192.168.1.5"),
+			},
+		},
+
+		"cidrnetmask": {
+			{
+				`cidrnetmask("192.168.1.0/24")`,
+				cty.StringVal("255.255.255.0"),
+			},
+		},
+
+		"cidrsubnet": {
+			{
+				`cidrsubnet("192.168.2.0/20", 4, 6)`,
+				cty.StringVal("192.168.6.0/24"),
+			},
+		},
+
+		"coalesce": {
+			{
+				`coalesce("first", "second", "third")`,
+				cty.StringVal("first"),
+			},
+
+			{
+				`coalescelist(["first", "second"], ["third", "fourth"])`,
+				cty.ListVal([]cty.Value{
+					cty.StringVal("first"), cty.StringVal("second"),
+				}),
+			},
+		},
+
+		"compact": {
+			{
+				`compact(["test", "", "test"])`,
+				cty.ListVal([]cty.Value{
+					cty.StringVal("test"), cty.StringVal("test"),
+				}),
+			},
+		},
+
+		"contains": {
+			{
+				`contains(["a", "b"], "a")`,
+				cty.True,
+			},
+			{ // Should also work with sets, due to automatic conversion
+				`contains(toset(["a", "b"]), "a")`,
+				cty.True,
+			},
+		},
+
+		"distinct": {
+			{
+				`distinct(["a", "b", "a", "b"])`,
+				cty.ListVal([]cty.Value{
+					cty.StringVal("a"), cty.StringVal("b"),
+				}),
+			},
+		},
+
+		"element": {
+			{
+				`element(["hello"], 0)`,
+				cty.StringVal("hello"),
+			},
+		},
+
+		"file": {
+			{
+				`file("hello.txt")`,
+				cty.StringVal("hello!"),
+			},
+		},
+
+		"filebase64sha256": {
+			{
+				`filebase64sha256("hello.txt")`,
+				cty.StringVal("zgYJL7lI2f+sfRo3bkBLJrdXW8wR7gWkYV/vT+w6MIs="),
+			},
+		},
+
+		"filebase64sha512": {
+			{
+				`filebase64sha512("hello.txt")`,
+				cty.StringVal("xvgdsOn4IGyXHJ5YJuO6gj/7saOpAPgEdlKov3jqmP38dFhVo4U6Y1Z1RY620arxIJ6I6tLRkjgrXEy91oUOAg=="),
+			},
+		},
+
+		"filemd5": {
+			{
+				`filemd5("hello.txt")`,
+				cty.StringVal("5a8dd3ad0756a93ded72b823b19dd877"),
+			},
+		},
+
+		"filesha1": {
+			{
+				`filesha1("hello.txt")`,
+				cty.StringVal("8f7d88e901a5ad3a05d8cc0de93313fd76028f8c"),
+			},
+		},
+
+		"filesha256": {
+			{
+				`filesha256("hello.txt")`,
+				cty.StringVal("ce06092fb948d9ffac7d1a376e404b26b7575bcc11ee05a4615fef4fec3a308b"),
+			},
+		},
+
+		"filesha512": {
+			{
+				`filesha512("hello.txt")`,
+				cty.StringVal("c6f81db0e9f8206c971c9e5826e3ba823ffbb1a3a900f8047652a8bf78ea98fdfc745855a3853a635675458eb6d1aaf1209e88ead2d192382b5c4cbdd6850e02"),
+			},
+		},
+
+		"flatten": {
+			{
+				`flatten([tolist(["a", "b"]), tolist(["c", "d"])])`,
+				cty.ListVal([]cty.Value{
+					cty.StringVal("a"),
+					cty.StringVal("b"),
+					cty.StringVal("c"),
+					cty.StringVal("d"),
+				}),
+			},
+		},
+
+		"index": {
+			{
+				`index(["a", "b", "c"], "a")`,
+				cty.NumberIntVal(0),
+			},
+		},
+
+		"keys": {
+			{
+				`keys({"hello"=1, "goodbye"=42})`,
+				cty.TupleVal([]cty.Value{
+					cty.StringVal("goodbye"),
+					cty.StringVal("hello"),
+				}),
+			},
+		},
+
+		"length": {
+			{
+				`length(["the", "quick", "brown", "bear"])`,
+				cty.NumberIntVal(4),
+			},
+		},
+
+		"list": {
+			{
+				`list("hello")`,
+				cty.ListVal([]cty.Value{
+					cty.StringVal("hello"),
+				}),
+			},
+		},
+
+		"lookup": {
+			{
+				`lookup({hello=1, goodbye=42}, "goodbye")`,
+				cty.NumberIntVal(42),
+			},
+		},
+
+		"map": {
+			{
+				`map("hello", "world")`,
+				cty.MapVal(map[string]cty.Value{
+					"hello": cty.StringVal("world"),
+				}),
+			},
+		},
+
+		"matchkeys": {
+			{
+				`matchkeys(["a", "b", "c"], ["ref1", "ref2", "ref3"], ["ref1"])`,
 				cty.ListVal([]cty.Value{
 					cty.StringVal("a"),
 				}),
-				cty.ListVal([]cty.Value{
-					cty.StringVal("b"),
+			},
+		},
+
+		"md5": {
+			{
+				`md5("tada")`,
+				cty.StringVal("ce47d07243bb6eaf5e1322c81baf9bbf"),
+			},
+		},
+
+		"merge": {
+			{
+				`merge({"a"="b"}, {"c"="d"})`,
+				cty.ObjectVal(map[string]cty.Value{
+					"a": cty.StringVal("b"),
+					"c": cty.StringVal("d"),
 				}),
+			},
+		},
+
+		"reverse": {
+			{
+				`reverse(["a", true, 0])`,
+				cty.TupleVal([]cty.Value{cty.Zero, cty.True, cty.StringVal("a")}),
+			},
+		},
+
+		"rsadecrypt": {
+			{
+				fmt.Sprintf("rsadecrypt(%#v, %#v)", CipherBase64, PrivateKey),
+				cty.StringVal("message"),
+			},
+		},
+
+		"setproduct": {
+			{
+				`setproduct(["development", "staging", "production"], ["app1", "app2"])`,
 				cty.ListVal([]cty.Value{
-					cty.StringVal("c"),
+					cty.TupleVal([]cty.Value{cty.StringVal("development"), cty.StringVal("app1")}),
+					cty.TupleVal([]cty.Value{cty.StringVal("development"), cty.StringVal("app2")}),
+					cty.TupleVal([]cty.Value{cty.StringVal("staging"), cty.StringVal("app1")}),
+					cty.TupleVal([]cty.Value{cty.StringVal("staging"), cty.StringVal("app2")}),
+					cty.TupleVal([]cty.Value{cty.StringVal("production"), cty.StringVal("app1")}),
+					cty.TupleVal([]cty.Value{cty.StringVal("production"), cty.StringVal("app2")}),
 				}),
-			}),
+			},
 		},
 
-		{
-			`cidrhost("192.168.1.0/24", 5)`,
-			cty.StringVal("192.168.1.5"),
+		"sha1": {
+			{
+				`sha1("test")`,
+				cty.StringVal("a94a8fe5ccb19ba61c4c0873d391e987982fbbd3"),
+			},
 		},
 
-		{
-			`cidrnetmask("192.168.1.0/24")`,
-			cty.StringVal("255.255.255.0"),
+		"sha256": {
+			{
+				`sha256("test")`,
+				cty.StringVal("9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08"),
+			},
 		},
 
-		{
-			`cidrsubnet("192.168.2.0/20", 4, 6)`,
-			cty.StringVal("192.168.6.0/24"),
+		"sha512": {
+			{
+				`sha512("test")`,
+				cty.StringVal("ee26b0dd4af7e749aa1a8ee3c10ae9923f618980772e473f8819a5d4940e0db27ac185f8a0e1d5f84f88bc887fd67b143732c304cc5fa9ad8e6f57f50028a8ff"),
+			},
 		},
 
-		{
-			`coalesce("first", "second", "third")`,
-			cty.StringVal("first"),
+		"slice": {
+			{
+				`slice(["a", "b", "c", "d"], 1, 3)`,
+				cty.ListVal([]cty.Value{
+					cty.StringVal("b"), cty.StringVal("c"),
+				}),
+			},
 		},
 
-		{
-			`coalescelist(["first", "second"], ["third", "fourth"])`,
-			cty.ListVal([]cty.Value{
-				cty.StringVal("first"), cty.StringVal("second"),
-			}),
+		"tobool": {
+			{
+				`tobool("false")`,
+				cty.False,
+			},
 		},
 
-		{
-			`compact(["test", "", "test"])`,
-			cty.ListVal([]cty.Value{
-				cty.StringVal("test"), cty.StringVal("test"),
-			}),
+		"tolist": {
+			{
+				`tolist(["a", "b", "c"])`,
+				cty.ListVal([]cty.Value{
+					cty.StringVal("a"), cty.StringVal("b"), cty.StringVal("c"),
+				}),
+			},
 		},
 
-		{
-			`contains(["a", "b"], "a")`,
-			cty.True,
-		},
-		{ // Should also work with sets, due to automatic conversion
-			`contains(toset(["a", "b"]), "a")`,
-			cty.True,
-		},
-
-		{
-			`distinct(["a", "b", "a", "b"])`,
-			cty.ListVal([]cty.Value{
-				cty.StringVal("a"), cty.StringVal("b"),
-			}),
+		"tomap": {
+			{
+				`tomap({"a" = 1, "b" = 2})`,
+				cty.MapVal(map[string]cty.Value{
+					"a": cty.NumberIntVal(1),
+					"b": cty.NumberIntVal(2),
+				}),
+			},
 		},
 
-		{
-			`element(["hello"], 0)`,
-			cty.StringVal("hello"),
+		"tonumber": {
+			{
+				`tonumber("42")`,
+				cty.NumberIntVal(42),
+			},
 		},
 
-		{
-			`file("hello.txt")`,
-			cty.StringVal("hello!"),
+		"toset": {
+			{
+				`toset(["a", "b", "c"])`,
+				cty.SetVal([]cty.Value{
+					cty.StringVal("a"), cty.StringVal("b"), cty.StringVal("c"),
+				}),
+			},
 		},
 
-		{
-			`flatten([tolist(["a", "b"]), tolist(["c", "d"])])`,
-			cty.ListVal([]cty.Value{
+		"tostring": {
+			{
+				`tostring("a")`,
 				cty.StringVal("a"),
-				cty.StringVal("b"),
-				cty.StringVal("c"),
-				cty.StringVal("d"),
-			}),
+			},
 		},
 
-		{
-			`index(["a", "b", "c"], "a")`,
-			cty.NumberIntVal(0),
+		"transpose": {
+			{
+				`transpose({"a" = ["1", "2"], "b" = ["2", "3"]})`,
+				cty.MapVal(map[string]cty.Value{
+					"1": cty.ListVal([]cty.Value{cty.StringVal("a")}),
+					"2": cty.ListVal([]cty.Value{cty.StringVal("a"), cty.StringVal("b")}),
+					"3": cty.ListVal([]cty.Value{cty.StringVal("b")}),
+				}),
+			},
 		},
 
-		{
-			`keys({"hello"=1, "goodbye"=42})`,
-			cty.TupleVal([]cty.Value{
-				cty.StringVal("goodbye"),
-				cty.StringVal("hello"),
-			}),
+		"values": {
+			{
+				`values({"hello"="world", "what's"="up"})`,
+				cty.TupleVal([]cty.Value{
+					cty.StringVal("world"),
+					cty.StringVal("up"),
+				}),
+			},
 		},
 
-		{
-			`length(["the", "quick", "brown", "bear"])`,
-			cty.NumberIntVal(4),
-		},
-
-		{
-			`list("hello")`,
-			cty.ListVal([]cty.Value{
-				cty.StringVal("hello"),
-			}),
-		},
-
-		{
-			`lookup({hello=1, goodbye=42}, "goodbye")`,
-			cty.NumberIntVal(42),
-		},
-
-		{
-			`map("hello", "world")`,
-			cty.MapVal(map[string]cty.Value{
-				"hello": cty.StringVal("world"),
-			}),
-		},
-
-		{
-			`matchkeys(["a", "b", "c"], ["ref1", "ref2", "ref3"], ["ref1"])`,
-			cty.ListVal([]cty.Value{
-				cty.StringVal("a"),
-			}),
-		},
-
-		{
-			`merge({"a"="b"}, {"c"="d"})`,
-			cty.ObjectVal(map[string]cty.Value{
-				"a": cty.StringVal("b"),
-				"c": cty.StringVal("d"),
-			}),
-		},
-
-		{
-			`reverse(["a", true, 0])`,
-			cty.TupleVal([]cty.Value{cty.Zero, cty.True, cty.StringVal("a")}),
-		},
-
-		{
-			`setproduct(["development", "staging", "production"], ["app1", "app2"])`,
-			cty.ListVal([]cty.Value{
-				cty.TupleVal([]cty.Value{cty.StringVal("development"), cty.StringVal("app1")}),
-				cty.TupleVal([]cty.Value{cty.StringVal("development"), cty.StringVal("app2")}),
-				cty.TupleVal([]cty.Value{cty.StringVal("staging"), cty.StringVal("app1")}),
-				cty.TupleVal([]cty.Value{cty.StringVal("staging"), cty.StringVal("app2")}),
-				cty.TupleVal([]cty.Value{cty.StringVal("production"), cty.StringVal("app1")}),
-				cty.TupleVal([]cty.Value{cty.StringVal("production"), cty.StringVal("app2")}),
-			}),
-		},
-
-		{
-			`slice(["a", "b", "c", "d"], 1, 3)`,
-			cty.ListVal([]cty.Value{
-				cty.StringVal("b"), cty.StringVal("c"),
-			}),
-		},
-
-		{
-			`transpose({"a" = ["1", "2"], "b" = ["2", "3"]})`,
-			cty.MapVal(map[string]cty.Value{
-				"1": cty.ListVal([]cty.Value{cty.StringVal("a")}),
-				"2": cty.ListVal([]cty.Value{cty.StringVal("a"), cty.StringVal("b")}),
-				"3": cty.ListVal([]cty.Value{cty.StringVal("b")}),
-			}),
-		},
-
-		{
-			`values({"hello"="world", "what's"="up"})`,
-			cty.TupleVal([]cty.Value{
-				cty.StringVal("world"),
-				cty.StringVal("up"),
-			}),
-		},
-
-		{
-			`zipmap(["hello", "bar"], ["world", "baz"])`,
-			cty.ObjectVal(map[string]cty.Value{
-				"hello": cty.StringVal("world"),
-				"bar":   cty.StringVal("baz"),
-			}),
+		"zipmap": {
+			{
+				`zipmap(["hello", "bar"], ["world", "baz"])`,
+				cty.ObjectVal(map[string]cty.Value{
+					"hello": cty.StringVal("world"),
+					"bar":   cty.StringVal("baz"),
+				}),
+			},
 		},
 	}
 
-	for _, test := range tests {
-		t.Run(test.src, func(t *testing.T) {
-			expr, parseDiags := hclsyntax.ParseExpression([]byte(test.src), "test.hcl", hcl.Pos{Line: 1, Column: 1})
-			if parseDiags.HasErrors() {
-				for _, diag := range parseDiags {
-					t.Error(diag.Error())
-				}
-				return
-			}
+	data := &dataForTests{} // no variables available; we only need literals here
+	scope := &Scope{
+		Data:    data,
+		BaseDir: "./testdata/functions-test", // for the functions that read from the filesystem
+	}
 
-			data := &dataForTests{} // no variables available; we only need literals here
-			scope := &Scope{
-				Data:    data,
-				BaseDir: "./testdata/functions-test", // for the functions that read from the filesystem
-			}
+	// Check that there is at least one test case for each function, omitting
+	// those functions that do not return consistent values
+	allFunctions := scope.Functions()
+	for _, impureFunc := range impureFunctions {
+		delete(allFunctions, impureFunc)
+	}
+	for f, _ := range scope.Functions() {
+		if _, ok := tests[f]; !ok {
+			t.Errorf("Missing test for function %s\n", f)
+		}
+	}
 
-			got, diags := scope.EvalExpr(expr, cty.DynamicPseudoType)
-			if diags.HasErrors() {
-				for _, diag := range diags {
-					t.Errorf("%s: %s", diag.Description().Summary, diag.Description().Detail)
-				}
-				return
-			}
+	for funcName, funcTests := range tests {
+		t.Run(funcName, func(t *testing.T) {
+			for _, test := range funcTests {
+				t.Run(test.src, func(t *testing.T) {
+					expr, parseDiags := hclsyntax.ParseExpression([]byte(test.src), "test.hcl", hcl.Pos{Line: 1, Column: 1})
+					if parseDiags.HasErrors() {
+						for _, diag := range parseDiags {
+							t.Error(diag.Error())
+						}
+						return
+					}
 
-			if !test.want.RawEquals(got) {
-				t.Errorf("wrong result\nexpr: %s\ngot:  %#v\nwant: %#v", test.src, got, test.want)
+					got, diags := scope.EvalExpr(expr, cty.DynamicPseudoType)
+					if diags.HasErrors() {
+						for _, diag := range diags {
+							t.Errorf("%s: %s", diag.Description().Summary, diag.Description().Detail)
+						}
+						return
+					}
+
+					if !test.want.RawEquals(got) {
+						t.Errorf("wrong result\nexpr: %s\ngot:  %#v\nwant: %#v", test.src, got, test.want)
+					}
+				})
 			}
 		})
 	}
 }
+
+const (
+	CipherBase64 = "eczGaDhXDbOFRZGhjx2etVzWbRqWDlmq0bvNt284JHVbwCgObiuyX9uV0LSAMY707IEgMkExJqXmsB4OWKxvB7epRB9G/3+F+pcrQpODlDuL9oDUAsa65zEpYF0Wbn7Oh7nrMQncyUPpyr9WUlALl0gRWytOA23S+y5joa4M34KFpawFgoqTu/2EEH4Xl1zo+0fy73fEto+nfkUY+meuyGZ1nUx/+DljP7ZqxHBFSlLODmtuTMdswUbHbXbWneW51D7Jm7xB8nSdiA2JQNK5+Sg5x8aNfgvFTt/m2w2+qpsyFa5Wjeu6fZmXSl840CA07aXbk9vN4I81WmJyblD/ZA=="
+	PrivateKey   = `
+-----BEGIN RSA PRIVATE KEY-----
+MIIEowIBAAKCAQEAgUElV5mwqkloIrM8ZNZ72gSCcnSJt7+/Usa5G+D15YQUAdf9
+c1zEekTfHgDP+04nw/uFNFaE5v1RbHaPxhZYVg5ZErNCa/hzn+x10xzcepeS3KPV
+Xcxae4MR0BEegvqZqJzN9loXsNL/c3H/B+2Gle3hTxjlWFb3F5qLgR+4Mf4ruhER
+1v6eHQa/nchi03MBpT4UeJ7MrL92hTJYLdpSyCqmr8yjxkKJDVC2uRrr+sTSxfh7
+r6v24u/vp/QTmBIAlNPgadVAZw17iNNb7vjV7Gwl/5gHXonCUKURaV++dBNLrHIZ
+pqcAM8wHRph8mD1EfL9hsz77pHewxolBATV+7QIDAQABAoIBAC1rK+kFW3vrAYm3
++8/fQnQQw5nec4o6+crng6JVQXLeH32qXShNf8kLLG/Jj0vaYcTPPDZw9JCKkTMQ
+0mKj9XR/5DLbBMsV6eNXXuvJJ3x4iKW5eD9WkLD4FKlNarBRyO7j8sfPTqXW7uat
+NxWdFH7YsSRvNh/9pyQHLWA5OituidMrYbc3EUx8B1GPNyJ9W8Q8znNYLfwYOjU4
+Wv1SLE6qGQQH9Q0WzA2WUf8jklCYyMYTIywAjGb8kbAJlKhmj2t2Igjmqtwt1PYc
+pGlqbtQBDUiWXt5S4YX/1maIQ/49yeNUajjpbJiH3DbhJbHwFTzP3pZ9P9GHOzlG
+kYR+wSECgYEAw/Xida8kSv8n86V3qSY/I+fYQ5V+jDtXIE+JhRnS8xzbOzz3v0WS
+Oo5H+o4nJx5eL3Ghb3Gcm0Jn46dHrxinHbm+3RjXv/X6tlbxIYjRSQfHOTSMCTvd
+qcliF5vC6RCLXuc7R+IWR1Ky6eDEZGtrvt3DyeYABsp9fRUFR/6NluUCgYEAqNsw
+1aSl7WJa27F0DoJdlU9LWerpXcazlJcIdOz/S9QDmSK3RDQTdqfTxRmrxiYI9LEs
+mkOkvzlnnOBMpnZ3ZOU5qIRfprecRIi37KDAOHWGnlC0EWGgl46YLb7/jXiWf0AG
+Y+DfJJNd9i6TbIDWu8254/erAS6bKMhW/3q7f2kCgYAZ7Id/BiKJAWRpqTRBXlvw
+BhXoKvjI2HjYP21z/EyZ+PFPzur/lNaZhIUlMnUfibbwE9pFggQzzf8scM7c7Sf+
+mLoVSdoQ/Rujz7CqvQzi2nKSsM7t0curUIb3lJWee5/UeEaxZcmIufoNUrzohAWH
+BJOIPDM4ssUTLRq7wYM9uQKBgHCBau5OP8gE6mjKuXsZXWUoahpFLKwwwmJUp2vQ
+pOFPJ/6WZOlqkTVT6QPAcPUbTohKrF80hsZqZyDdSfT3peFx4ZLocBrS56m6NmHR
+UYHMvJ8rQm76T1fryHVidz85g3zRmfBeWg8yqT5oFg4LYgfLsPm1gRjOhs8LfPvI
+OLlRAoGBAIZ5Uv4Z3s8O7WKXXUe/lq6j7vfiVkR1NW/Z/WLKXZpnmvJ7FgxN4e56
+RXT7GwNQHIY8eDjDnsHxzrxd+raOxOZeKcMHj3XyjCX3NHfTscnsBPAGYpY/Wxzh
+T8UYnFu6RzkixElTf2rseEav7rkdKkI3LAeIZy7B0HulKKsmqVQ7
+-----END RSA PRIVATE KEY-----
+`
+)
