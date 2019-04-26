@@ -286,6 +286,18 @@ Value:
 		}
 
 		parts = upgradeTraversalParts(parts, an) // might add/remove/change parts
+
+		if !validResourceLabel(parts) {
+			// We can't get any useful source location out of HIL unfortunately
+			diags = diags.Append(tfdiags.Sourceless(
+				tfdiags.Error,
+				fmt.Sprintf("Invalid address (%q)", tv.Name),
+				// The label could be invalid for another reason
+				// but this is the most likely, so we add it as hint
+				"Labels of resources and data sources can no longer start with digits."))
+			break
+		}
+
 		first, remain := parts[0], parts[1:]
 		buf.WriteString(first)
 		seenSplat := false
@@ -612,6 +624,28 @@ Value:
 	}
 
 	return buf.Bytes(), diags
+}
+
+func validResourceLabel(parts []string) bool {
+	if len(parts) < 1 {
+		return false
+	}
+
+	var label string
+	switch parts[0] {
+	case "data":
+		if len(parts) < 3 {
+			return false
+		}
+		label = parts[2]
+	default:
+		if len(parts) < 2 {
+			return false
+		}
+		label = parts[1]
+	}
+
+	return hcl2syntax.ValidIdentifier(label)
 }
 
 func upgradeHeredocBody(buf *bytes.Buffer, val *hilast.Output, filename string, an *analysis) tfdiags.Diagnostics {
